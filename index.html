@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ha">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ProfitPilot AI</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #00d2ff;
+            --secondary: #3a7bd5;
+            --accent: #10b981;
+            --danger: #ff4b2b;
+            --dark-bg: #05070a; /* Baki mai zurfi */
+            --card-bg: #0f172a;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #ffffff;
+            line-height: 1.6;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        /* Header Image Section */
+        header {
+            width: 100%;
+            text-align: center;
+            background: #000;
+        }
+
+        .header-img {
+            width: 100%;
+            max-height: 70px;
+            object-fit: contain; 
+            display: block;
+        }
+
+        /* Description Image Section */
+        .desc-section {
+            width: 100%;
+            background: #000;
+            padding-bottom: 20px;
+        }
+
+        .desc-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .desc-text {
+            padding: 0 20px;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            text-align: center;
+        }
+
+        /* Navigation Buttons */
+        .nav-btns {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px 10px;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 12px 5px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+        }
+
+        /* Form Container */
+        .container {
+            padding: 15px;
+            width: 100%;
+        }
+
+        .form-card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-size: 0.8rem; color: var(--primary); }
+        
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #1e293b;
+            background: #05070a;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
+        }
+
+        /* Results Area - Modified for vertical stacking on mobile */
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            width: 100%;
+            padding: 20px;
+            border-radius: 15px;
+            background: #0f172a;
+            border-left: 5px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .stat-card.lg { border-color: var(--primary); height: 100px; }
+        .stat-card.md { border-color: var(--accent); height: 80px; }
+        .stat-card.sm { border-color: var(--danger); height: 60px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+
+        .ai-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 15px;
+            border: 1px dashed var(--glass-border);
+        }
+
+        .chart-box { margin-top: 20px; background: #000; padding: 10px; border-radius: 15px; }
+
+        .hidden { display: none; }
+
+        .notification {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="https://i.imgur.com/ICdbmTS.png" alt="Header" class="header-img">
+    </header>
+
+    <div class="desc-section">
+          
+        <img src="https://i.imgur.com/pyzdn8J.png" alt="Business" class="desc-img">
+        <p class="desc-text">ProfitPilot AI helps you calculate your profit/loss and provides smart growth advice based on real-time data.</p>
+    </div>
+
+    <div class="nav-btns">
+        <button class="nav-btn active">Dashboard</button>
+        <button class="nav-btn" onclick="window.location.href='myBusiness.html'">My Analysis</button>
+    </div>
+
+    <main class="container">
+        <section id="inputSection" class="form-card">
+            <div class="input-group">
+                <label><i class="fas fa-language"></i> SELECT LANGUAGE</label>
+                <select id="language">
+                    <option value="English">English</option>
+                    <option value="Hausa">Hausa</option>
+                    <option value="Yoruba">Yoruba</option>
+                    <option value="Igbo">Igbo</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>CAPITAL (₦)</label>
+                <input type="number" id="capital" placeholder="Enter Capital">
+            </div>
+            <div class="input-group">
+                <label>TOTAL COST (₦)</label>
+                <input type="number" id="cost" placeholder="Enter Cost">
+            </div>
+            <div class="input-group">
+                <label>TOTAL SALES (₦)</label>
+                <input type="number" id="sales" placeholder="Enter Sales">
+            </div>
+
+            <button id="submitBtn" class="submit-btn">ANALYZE NOW <i class="fas fa-chart-pie"></i></button>
+        </section>
+
+        <section id="resultSection" class="hidden">
+            <div class="results-list">
+                <div class="stat-card lg">
+                    <span>CAPITAL</span>
+                    <h2 id="resCap">₦0</h2>
+                </div>
+                <div class="stat-card md">
+                    <span>TOTAL COST</span>
+                    <h2 id="resCost">₦0</h2>
+                </div>
+                <div class="stat-card sm">
+                    <span>REVENUE</span>
+                    <h2 id="resSales">₦0</h2>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <canvas id="profitChart"></canvas>
+            </div>
+
+            <div class="ai-box">
+                <h4 style="color: var(--primary);"><i class="fas fa-robot"></i> AI ADVICE:</h4>
+                <p id="aiText" style="font-size: 0.9rem; margin-top: 10px;">Calculating...</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="copyData()" class="nav-btn" style="flex: 1;"><i class="fas fa-copy"></i> Copy</button>
+                <button onclick="location.reload()" class="nav-btn" style="flex: 1; border-color: var(--danger);"><i class="fas fa-trash"></i> Reset</button>
+            </div>
+        </section>
+    </main>
+
+    <div id="notification" class="notification">Done!</div>
+    <audio id="alertSound" src="alam.mp3"></audio>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "@google/generative-ai": "https://esm.run/@google/generative-ai"
+          }
+        }
+    </script>
+    <script type="module">
+        import { GoogleGenerativeAI } from "@google/generative-ai";
+        const API_KEY = "AIzaSyDo7WaZSHytqJcNwE9XvLxfjoAPVJrxkGc";
+        const genAI = new GoogleGenerativeAI(API_KEY);
+
+        document.getElementById('submitBtn').addEventListener('click', async () => {
+            const cap = document.getElementById('capital').value;
+            const cost = document.getElementById('cost').value;
+            const sales = document.getElementById('sales').value;
+            const lang = document.getElementById('language').value;
+
+            if(!cap || !cost || !sales) return alert("Fill all fields!");
+
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+            
+            document.getElementById('alertSound').play();
+            
+            // UI Update
+            document.getElementById('resCap').innerText = `₦${Number(cap).toLocaleString()}`;
+            document.getElementById('resCost').innerText = `₦${Number(cost).toLocaleString()}`;
+            document.getElementById('resSales').innerText = `₦${Number(sales).toLocaleString()}`;
+
+            // Chart
+            new Chart(document.getElementById('profitChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Capital', 'Cost', 'Sales'],
+                    datasets: [{
+                        data: [cap, cost, sales],
+                        backgroundColor: ['#00d2ff', '#10b981', '#ff4b2b']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+
+            // AI Logic
+            try {
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const prompt = `Analyze this business data in ${lang}: Capital ₦${cap}, Cost ₦${cost}, Sales ₦${sales}. Give a very short advice.`;
+                const result = await model.generateContent(prompt);
+                document.getElementById('aiText').innerText = result.response.text();
+            } catch (e) {
+                document.getElementById('aiText').innerText = "AI service unavailable.";
+            }
+        });
+
+        window.copyData = () => {
+            navigator.clipboard.writeText(document.getElementById('aiText').innerText);
+            const note = document.getElementById('notification');
+            note.style.display = 'block';
+            setTimeout(() => note.style.display = 'none', 2000);
+        }
+    </script>
+</body>
+</html>
