@@ -14,7 +14,7 @@
             --secondary: #3a7bd5;
             --accent: #10b981;
             --danger: #ff4b2b;
-            --dark-bg: #05070a; /* Baki mai zurfi */
+            --dark-bg: #05070a; 
             --card-bg: #0f172a;
             --glass-border: rgba(255, 255, 255, 0.1);
         }
@@ -131,7 +131,7 @@
             box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
         }
 
-        /* Results Area - Modified for vertical stacking on mobile */
+       
         .results-list {
             display: flex;
             flex-direction: column;
@@ -271,58 +271,44 @@
         }
     </script>
     <script type="module">
-        import { GoogleGenerativeAI } from "@google/generative-ai";
-        const API_KEY = "AIzaSyDo7WaZSHytqJcNwE9XvLxfjoAPVJrxkGc";
-        const genAI = new GoogleGenerativeAI(API_KEY);
+    import { callAI, showNotify } from './pro.js';
 
-        document.getElementById('submitBtn').addEventListener('click', async () => {
-            const cap = document.getElementById('capital').value;
-            const cost = document.getElementById('cost').value;
-            const sales = document.getElementById('sales').value;
-            const lang = document.getElementById('language').value;
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+        const cap = document.getElementById('capital').value;
+        const cost = document.getElementById('cost').value;
+        const sales = document.getElementById('sales').value;
+        const lang = document.getElementById('language').value;
 
-            if(!cap || !cost || !sales) return alert("Fill all fields!");
+        if(!cap || !cost || !sales) {
+            showNotify("Please fill all business fields!", "bg-red-500");
+            return;
+        }
 
-            document.getElementById('inputSection').classList.add('hidden');
-            document.getElementById('resultSection').classList.remove('hidden');
-            
-            document.getElementById('alertSound').play();
-            
-            // UI Update
-            document.getElementById('resCap').innerText = `₦${Number(cap).toLocaleString()}`;
-            document.getElementById('resCost').innerText = `₦${Number(cost).toLocaleString()}`;
-            document.getElementById('resSales').innerText = `₦${Number(sales).toLocaleString()}`;
+        document.getElementById('inputSection').classList.add('hidden');
+        document.getElementById('resultSection').classList.remove('hidden');
+        document.getElementById('alertSound').play();
 
-            // Chart
-            new Chart(document.getElementById('profitChart'), {
-                type: 'bar',
-                data: {
-                    labels: ['Capital', 'Cost', 'Sales'],
-                    datasets: [{
-                        data: [cap, cost, sales],
-                        backgroundColor: ['#00d2ff', '#10b981', '#ff4b2b']
-                    }]
-                },
-                options: { responsive: true, plugins: { legend: { display: false } } }
-            });
+        document.getElementById('resCap').innerText = `₦${Number(cap).toLocaleString()}`;
+        document.getElementById('resCost').innerText = `₦${Number(cost).toLocaleString()}`;
+        document.getElementById('resSales').innerText = `₦${Number(sales).toLocaleString()}`;
 
-            // AI Logic
-            try {
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                const prompt = `Analyze this business data in ${lang}: Capital ₦${cap}, Cost ₦${cost}, Sales ₦${sales}. Give a very short advice.`;
-                const result = await model.generateContent(prompt);
-                document.getElementById('aiText').innerText = result.response.text();
-            } catch (e) {
-                document.getElementById('aiText').innerText = "AI service unavailable.";
-            }
+        new Chart(document.getElementById('profitChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Capital', 'Cost', 'Sales'],
+                datasets: [{ data: [cap, cost, sales], backgroundColor: ['#00d2ff', '#10b981', '#ff4b2b'] }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
         });
 
-        window.copyData = () => {
-            navigator.clipboard.writeText(document.getElementById('aiText').innerText);
-            const note = document.getElementById('notification');
-            note.style.display = 'block';
-            setTimeout(() => note.style.display = 'none', 2000);
-        }
-    </script>
+        const aiResponse = await callAI({ cap, cost, sales, lang }, "index");
+        document.getElementById('aiText').innerText = aiResponse || "AI analysis failed.";
+    });
+
+    window.copyData = () => {
+        navigator.clipboard.writeText(document.getElementById('aiText').innerText);
+        showNotify("Report copied successfully!");
+    }
+</script>
 </body>
 </html>
