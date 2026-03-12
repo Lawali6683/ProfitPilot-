@@ -63,9 +63,7 @@
     <button class="btn active">My Daily Analysis</button>
 </div>
 
-<div class="crypto-chart-img">
-   
-</div>
+
 
 <main class="container">
     <div id="formSection">
@@ -105,9 +103,7 @@
 
 <script type="importmap">{ "imports": { "@google/generative-ai": "https://esm.run/@google/generative-ai" } }</script>
 <script type="module">
-    import { GoogleGenerativeAI } from "@google/generative-ai";
-    const API_KEY = "AIzaSyDo7WaZSHytqJcNwE9XvLxfjoAPVJrxkGc";
-    const genAI = new GoogleGenerativeAI(API_KEY);
+    import { callAI, showNotify } from './pro.js';
 
     let logs = JSON.parse(localStorage.getItem('biz_logs')) || [];
 
@@ -115,54 +111,35 @@
         const c = document.getElementById('dCap').value;
         const co = document.getElementById('dCost').value;
         const s = document.getElementById('dSales').value;
-        if(!c || !co || !s) return alert("Cike komai!");
 
-        const entry = { day: logs.length+1, cap: c, cost: co, sale: s, time: Date.now() };
-        logs.push(entry);
+        if(!c || !co || !s) return showNotify("Please fill all daily records!", "bg-red-500");
+
+        logs.push({ day: logs.length+1, cap: c, cost: co, sale: s, time: Date.now() });
         localStorage.setItem('biz_logs', JSON.stringify(logs));
         localStorage.setItem('last_entry', Date.now());
-        alert("An adana!");
-        location.reload();
-    }
-
-    const lastEntry = localStorage.getItem('last_entry');
-    if(lastEntry && (Date.now() - lastEntry < 86400000)) {
-        document.getElementById('formSection').style.display = 'none';
-        document.getElementById('waitMessage').style.display = 'block';
-    }
-    document.getElementById('dayDisplay').innerText = `DAY ${logs.length + 1}`;
-
-    // Progress logic
-    if(logs.length > 0) {
-        const last = logs[logs.length-1];
-        document.getElementById('capBar').style.width = "75%";
-        document.getElementById('costBar').style.width = "40%";
-        document.getElementById('saleBar').style.width = "90%";
-    }
-
-    window.showHistory = () => {
-        const list = document.getElementById('historyList');
-        list.innerHTML = logs.map(l => `
-            <div class="history-card">
-                <strong>Day ${l.day}</strong><br>
-                <small>Profit: ₦${l.sale - l.cost} | Sales: ₦${l.sale}</small>
-            </div>
-        `).join('');
-        document.getElementById('overlay').style.display = 'block';
+        
+        showNotify("Daily entry saved!");
+        setTimeout(() => location.reload(), 1500);
     }
 
     window.askAI = async () => {
-        if(logs.length === 0) return alert("Babu bayanai.");
-        alert("Gemini AI yana nazarin kwanakin ka...");
-        try {
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            const prompt = `Wannan bayanan kasuwancina ne na kwanaki ${logs.length}. Ga su: ${JSON.stringify(logs)}. Bani shawara a Hausa ko ina samu riba ko faduwa.`;
-            const result = await model.generateContent(prompt);
-            alert(result.response.text());
-        } catch(e) { alert("AI Error"); }
+        if(logs.length === 0) return showNotify("No logs found to analyze.", "bg-yellow-600");
+        
+        showNotify("AI analysis started. Please wait...");
+        const aiResponse = await callAI({ logs, days: logs.length }, "daily");
+        if (aiResponse) {
+            showNotify("Analysis complete!");
+            alert(aiResponse); // Zaka iya sanya wannan a modal idan kana so
+        }
     }
 
-    window.resetData = () => { if(confirm("Kana son goge komai?")) { localStorage.clear(); location.reload(); } }
+    window.resetData = () => { 
+        if(confirm("Are you sure you want to delete all data?")) { 
+            localStorage.clear(); 
+            showNotify("All data cleared!", "bg-red-600");
+            location.reload(); 
+        } 
+    }
 </script>
 </body>
 </html>
