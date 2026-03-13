@@ -1,10 +1,8 @@
-// Mun sauya wannan layin don Cloudflare ya gane shi ba tare da Build error ba
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 
 export async function onRequest(context) {
   const { request, env } = context;
   
-  // Mun bude kofa don localhost da Production su yi aiki ba tare da CORS error ba
   const origin = request.headers.get("Origin") || "*";
   const corsHeaders = {
     "Access-Control-Allow-Origin": origin,
@@ -13,12 +11,10 @@ export async function onRequest(context) {
     "Access-Control-Max-Age": "86400",
   };
 
-  // 1. Amisawa OPTIONS request (Preflight)
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // 2. Tabbatar POST request ne kawai
   if (request.method !== "POST") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
@@ -29,7 +25,6 @@ export async function onRequest(context) {
   try {
     const { payload, password, type } = await request.json();
 
-    // 3. Duba Password
     if (password !== "@haruna66") {
       return new Response(
         JSON.stringify({ error: "Unauthorized access" }),
@@ -37,7 +32,6 @@ export async function onRequest(context) {
       );
     }
 
-    // 4. Duba idan akwai API Key a Dashboard
     if (!env.GEMINI_API_KEY) {
       return new Response(
         JSON.stringify({ error: "API Key missing in Cloudflare Dashboard" }),
@@ -82,7 +76,6 @@ export async function onRequest(context) {
     );
 
   } catch (err) {
-    // Mun sauya wannan don ya gaya maka takamaiman abin da ya faru (misali invalid API key)
     return new Response(
       JSON.stringify({ error: err.message }),
       {
