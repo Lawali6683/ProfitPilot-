@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
-
 export async function onRequest(context) {
   const { request, env } = context;
   
@@ -39,33 +37,33 @@ export async function onRequest(context) {
       );
     }
 
-    const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    let prompt;
+    let promptText = "";
     if (type === "index") {
-      prompt = `
-        Analyze business data:
-        Capital: ₦${payload.cap}
-        Cost: ₦${payload.cost}
-        Sales: ₦${payload.sales}
-        Language: ${payload.lang}
-        Give short professional business advice in the language requested.
-      `;
+      promptText = `Analyze business data: Capital ₦${payload.cap}, Cost ₦${payload.cost}, Sales ₦${payload.sales}. Language: ${payload.lang}. Give short professional business advice in the language requested.`;
     } else {
-      prompt = `
-        Business logs for ${payload.days} days:
-        ${JSON.stringify(payload.logs)}
-        Analyze performance in English.
-        Say clearly if the business is making profit or loss based on the logs provided.
-      `;
+      promptText = `Business logs for ${payload.days} days: ${JSON.stringify(payload.logs)}. Analyze performance in English. Say clearly if the business is making profit or loss based on the logs provided.`;
     }
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+
+    const geminiResponse = await fetch(apiURL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }]
+      })
+    });
+
+    const data = await geminiResponse.json();
+
+    if (data.error) {
+      throw new Error(data.error.message || "Gemini API Error");
+    }
+
+    const aiText = data.candidates[0].content.parts[0].text;
 
     return new Response(
-      JSON.stringify({ text: response.text() }),
+      JSON.stringify({ text: aiText }),
       {
         status: 200,
         headers: {
