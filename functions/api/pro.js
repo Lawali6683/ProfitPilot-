@@ -1,65 +1,137 @@
-export async function callAI(data, type) {
-    try {
-        const response = await fetch("https://propitpilot.page.dev/api/pro", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ payload: data, password: "@haruna66", type: type })
-        });
-        const result = await response.json();
-        return result.text || result.error;
-    } catch (err) {
-        return "Connection Error";
-    }
+export async function onRequest(context){
+
+const {request,env}=context
+
+const origin=request.headers.get("Origin")||"*"
+
+const corsHeaders={
+"Access-Control-Allow-Origin":origin,
+"Access-Control-Allow-Methods":"POST, OPTIONS",
+"Access-Control-Allow-Headers":"Content-Type",
+"Access-Control-Max-Age":"86400"
 }
 
-export function showNotify(msg, color = "bg-blue-600") {
-    let container = document.getElementById('notification-container') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'notification-container', className: "fixed top-5 right-5 z-50" }));
-    const toast = document.createElement('div');
-    toast.className = `${color} text-white px-6 py-4 rounded-xl shadow-2xl mb-3 transition-all duration-500 transform translate-x-10 opacity-0`;
-    toast.innerHTML = `<span>${msg}</span>`;
-    container.appendChild(toast);
-    setTimeout(() => toast.classList.remove('translate-x-10', 'opacity-0'), 100);
-    setTimeout(() => {
-        toast.classList.add('opacity-0');
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
+if(request.method==="OPTIONS"){
+return new Response(null,{status:204,headers:corsHeaders})
 }
 
-export async function onRequest(context) {
-    const { request, env } = context;
-    const corsHeaders = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-    };
+if(request.method!=="POST"){
+return new Response(
+JSON.stringify({error:"Method not allowed"}),
+{status:405,headers:corsHeaders}
+)
+}
 
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+try{
 
-    try {
-        const { payload, password, type } = await request.json();
-        if (password !== "@haruna66") return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+const {payload,password,type}=await request.json()
 
-        let promptText = "";
-        const lang = payload.lang || "English";
+if(password!=="@haruna66"){
+return new Response(
+JSON.stringify({error:"Unauthorized access"}),
+{status:401,headers:corsHeaders}
+)
+}
 
-        if (type === "index") {
-            const profit = payload.sales - payload.cost;
-            promptText = `System: ProfitPilot AI Consultant. Data: Capital ₦${payload.cap}, Cost ₦${payload.cost}, Sales ₦${payload.sales}. Profit/Loss: ₦${profit}. Language: ${lang}. Give short professional advice in ${lang}.`;
-        } else if (type === "daily") {
-            promptText = `System: ProfitPilot AI Auditor. Analyzing logs for ${payload.days} days: ${JSON.stringify(payload.logs)}. Language: ${lang}. Provide a detailed performance summary and business growth advice in ${lang}.`;
-        }
+if(!env.GEMINI_API_KEY){
+return new Response(
+JSON.stringify({error:"API Key missing in Cloudflare Dashboard"}),
+{status:500,headers:corsHeaders}
+)
+}
 
-        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-        });
+let promptText=""
 
-        const resData = await geminiRes.json();
-        return new Response(JSON.stringify({ text: resData.candidates[0].content.parts[0].text }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-    } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
-    }
+if(type==="index"){
+
+const cap=Number(payload.cap)
+const cost=Number(payload.cost)
+const sales=Number(payload.sales)
+
+const profit=sales-cost
+
+let status=""
+
+if(profit>0){
+status="profit"
+}else if(profit<0){
+status="loss"
+}else{
+status="break even"
+}
+
+promptText=`You are ProfitPilot AI business assistant. Analyze this small business data.
+
+Capital: ₦${cap}
+Cost: ₦${cost}
+Sales: ₦${sales}
+Profit: ₦${profit}
+
+Language: ${payload.lang}
+
+Explain clearly if the business is making profit or loss.
+Give short practical business advice to help the user grow the business.
+Keep answer short and easy for small traders.`
+
+}else{
+
+promptText=`Analyze this business log data and determine if the business is making profit or loss.
+
+Logs: ${JSON.stringify(payload.logs)}
+
+Explain clearly.`
+
+}
+
+const apiURL=`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`
+
+const geminiResponse=await fetch(apiURL,{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+contents:[
+{
+parts:[
+{
+text:promptText
+}
+]
+}
+]
+})
+})
+
+const data=await geminiResponse.json()
+
+if(data.error){
+throw new Error(data.error.message||"Gemini API Error")
+}
+
+const aiText=data.candidates[0].content.parts[0].text
+
+return new Response(
+JSON.stringify({text:aiText}),
+{
+status:200,
+headers:{
+...corsHeaders,
+"Content-Type":"application/json"
+}
+}
+)
+
+}catch(err){
+
+return new Response(
+JSON.stringify({error:err.message}),
+{
+status:500,
+headers:corsHeaders
+}
+)
+
+}
+
 }
