@@ -5,19 +5,20 @@ export async function onRequest(context) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept",
     "Access-Control-Max-Age": "86400",
     "Access-Control-Allow-Credentials": "true"
   };
 
-  if (request.method === "OPTIONS") {
+  if (request.method.toUpperCase() === "OPTIONS") {
     return new Response(null, { 
-      status: 200, 
+      status: 200,
+      statusText: "OK", 
       headers: corsHeaders 
     });
   }
 
-  if (request.method !== "POST") {
+  if (request.method.toUpperCase() !== "POST") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
       { 
