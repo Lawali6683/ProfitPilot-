@@ -63,9 +63,12 @@ export async function onRequest(context) {
       'Do not use any other language. ' +
       'Provide accurate, factual information based on WHO and Nigeria NPHCDA guidelines. ' +
       'Be warm, encouraging, educational, and thorough. ' +
-      'Give complete detailed answers with examples, explanations, and practical advice. ' +
-      'Aim for 3-6 paragraphs of rich content so the user learns deeply. ' +
-      'Do not be too short. Do not use English unless the user asks in English.';
+      'Answer the question directly and precisely. Give a complete detailed answer. ' +
+      'If the user asks "what is immunization" or similar, explain it clearly step by step. ' +
+      'If the user asks a specific question, answer exactly what they asked. ' +
+      'Do not give generic unrelated advice. Stay on topic. ' +
+      'Aim for the answer to be detailed but natural, like a real conversation with ChatGPT. ' +
+      'Do not repeat the same fallback message. Always answer the specific question asked.';
 
     var fullPrompt = systemPrompt + '\n\n';
     if (conversationContext) {
@@ -73,7 +76,7 @@ export async function onRequest(context) {
     }
     fullPrompt += 'User question in ' + targetLang + ': ' + prompt + '\n\n' +
       'Respond in ' + targetLang + ' language only. Do not switch to English. ' +
-      'Give a thorough, helpful, and warm answer with practical health advice.';
+      'Answer the question directly. Give a thorough, helpful answer with practical health advice.';
 
     const GEMINI_API_KEY = env.GEMINI_API_KEY;
 
@@ -90,7 +93,7 @@ export async function onRequest(context) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: fullPrompt }] }],
         generationConfig: {
-          temperature: 0.4,
+          temperature: 0.7,
           maxOutputTokens: 1500,
           topP: 0.95
         }
@@ -98,11 +101,14 @@ export async function onRequest(context) {
     });
 
     const geminiData = await geminiRes.json();
-    var responseText = 'Na gode da tambayar ku. A kula da lafiyar yara, mahimman abubuwa sun hada da: rigakafi, tsafta, abinci mai gina jiki, da kuma kula da lafiyar yara akai-akai. Domin samun cikakken bayani, ziyarci asibitin da yake kusa da ku.';
+    var responseText = '';
 
     if (geminiData.candidates && geminiData.candidates.length > 0 &&
       geminiData.candidates[0].content && geminiData.candidates[0].content.parts) {
       responseText = geminiData.candidates[0].content.parts.map(function(p) { return p.text; }).join('');
+    } else {
+      var errorMsg = geminiData.error ? geminiData.error.message : 'Unknown error';
+      responseText = 'Sorry, I encountered an error processing your request. Please try again. Error: ' + errorMsg;
     }
 
     return new Response(JSON.stringify({ response: responseText }), {
@@ -111,9 +117,42 @@ export async function onRequest(context) {
     });
 
   } catch (err) {
+    var fallbackMsg = '';
+
+    try {
+      const fbPrompt = 'In ' + (targetLang || 'English') + ' language, answer this question briefly: ' + prompt;
+      const fbRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + env.GEMINI_API_KEY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: fbPrompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
+        })
+      });
+      const fbData = await fbRes.json();
+      if (fbData.candidates && fbData.candidates.length > 0 &&
+        fbData.candidates[0].content && fbData.candidates[0].content.parts) {
+        fallbackMsg = fbData.candidates[0].content.parts.map(function(p) { return p.text; }).join('');
+      }
+    } catch (fbErr) {
+      fallbackMsg = '';
+    }
+
+    if (!fallbackMsg) {
+      if (language === 'HA') {
+        fallbackMsg = 'Rigakafi wata hanya ce ta kare lafiyar yara daga cututtuka masu yaduwa. Ana ba da alluran rigakafi ga yara tun daga lokacin haihuwa don hana cututtuka kamar shan inna, tarin fuka, da ciwon huhu. Tuntuɓi asibiti don ƙarin bayani.';
+      } else if (language === 'YO') {
+        fallbackMsg = 'Ajesara jẹ ọna lati daabobo awọn ọmọde lọwọ awọn arun ti o le tan kaakiri. A n fun awọn ọmọde ni abo ajesara lati igba ibi wọn lati ṣe idiwọ awọn arun bii polio, iko, ati arun ẹdọfóró. Kan si ile-iwosan fun alaye diẹ sii.';
+      } else if (language === 'IG') {
+        fallbackMsg = 'Ịgba ọgwụ mgbochi bụ ụzọ is chebe ụmụaka pụọ na ọrịa na-efe efe. A na-enye ụmụaka ọgwụ mgbochi site n'oge a mụrụ ha iji gbochie ọrịa ndị dị ka polio, ụkwara nta, na oyi. Gakwuru ụlọ ọgwụ maka nkọwa ndị ọzọ.';
+      } else {
+        fallbackMsg = 'Immunization is a way to protect children from infectious diseases. Children receive vaccines starting at birth to prevent diseases like polio, tuberculosis, and pneumonia. Contact a health center for more information.';
+      }
+    }
+
     return new Response(JSON.stringify({
       error: 'Internal server error: ' + err.message,
-      response: 'Na gode da tambayar ku. A kula da lafiyar yara, mahimman abubuwa sun hada da: rigakafi, tsafta, abinci mai gina jiki, da kuma kula da lafiyar yara akai-akai. Domin samun cikakken bayani, ziyarci asibitin da yake kusa da ku.'
+      response: fallbackMsg
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
