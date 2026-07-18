@@ -45,15 +45,27 @@ export async function onRequest(context) {
     const systemInstruction = `You are Care Live AI, an advanced conversational health assistant for 'Folio: Saving & Protecting Lives'. Act exactly like ChatGPT. Engage in a natural, friendly, and interactive chat. Do not start with generic appreciation phrases like 'Thank you for your question'. Answer questions naturally based on WHO and NPHCDA guidelines. You must speak, respond, and chat dynamically in the ${targetLang} language. Be concise and conversational.`;
 
     let apiContents = [];
+
+    apiContents.push({
+      role: 'user',
+      parts: [{ text: systemInstruction }]
+    });
     
+    apiContents.push({
+      role: 'model',
+      parts: [{ text: "Understood. I will act as Care Live AI, speaking dynamically in " + targetLang + " without using generic text." }]
+    });
+
     if (history && history.length > 0) {
-      apiContents = history.map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      }));
+      history.forEach(msg => {
+        apiContents.push({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }]
+        });
+      });
     }
 
-    if (apiContents.length === 0 || apiContents[apiContents.length - 1].parts[0].text !== prompt) {
+    if (apiContents[apiContents.length - 1].parts[0].text !== prompt) {
       apiContents.push({
         role: 'user',
         parts: [{ text: prompt }]
@@ -73,9 +85,6 @@ export async function onRequest(context) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: apiContents,
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
-        },
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 1024
@@ -93,14 +102,20 @@ export async function onRequest(context) {
       });
     }
 
-    throw new Error(geminiData.error?.message || 'Invalid API response structure');
+    return new Response(JSON.stringify({ 
+      error: 'API Error', 
+      details: geminiData 
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
 
   } catch (err) {
     return new Response(JSON.stringify({
       error: 'Internal server error',
       message: err.message
     }), {
-      status: 500,
+      status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
