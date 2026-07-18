@@ -1,12 +1,24 @@
-Ina son ka taimaka min ka gyara min wannan shafin saboda ya dinga karbar request daga ko ina, ba tare da an samu error ba Access to fetch at 'https://propitpilot.pages.dev/api/folio' from origin 'http://localhost:8080' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.  Ka gyara min in yi copy in gwada,
-
 export async function onRequest(context) {
   const { request, env } = context;
+
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400'
+  };
+
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders
+    });
+  }
 
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 
@@ -19,7 +31,7 @@ export async function onRequest(context) {
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Prompt is required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
 
@@ -58,7 +70,7 @@ export async function onRequest(context) {
     if (!GEMINI_API_KEY) {
       return new Response(JSON.stringify({ error: 'API key not configured' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
 
@@ -84,7 +96,7 @@ export async function onRequest(context) {
 
     return new Response(JSON.stringify({ response: responseText }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
 
   } catch (err) {
@@ -93,7 +105,7 @@ export async function onRequest(context) {
       response: 'Thank you for your question! Vaccines are one of the most important tools we have to protect our children. For specific questions, please visit your nearest primary health center where trained health workers can provide personalized guidance.'
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 }
