@@ -45,8 +45,8 @@ export async function onRequest(context) {
     const targetLang = langMap[language] || 'English';
 
     var conversationContext = '';
-    if (history && history.length > 1) {
-      var recentHistory = history.slice(-6);
+    if (history && history.length > 0) {
+      var recentHistory = history.slice(-10);
       for (var h = 0; h < recentHistory.length; h++) {
         var entry = recentHistory[h];
         if (entry.role === 'user') {
@@ -57,13 +57,23 @@ export async function onRequest(context) {
       }
     }
 
-    const fullPrompt = 'You are Care Live AI, a helpful health assistant for Folio: Saving & Protecting Lives, a Nigerian child vaccination tracking platform. ' +
-      'Answer the following question about vaccines, child health, immunization, or related topics. ' +
+    const systemPrompt = 'You are Care Live AI, a helpful health assistant for Folio: Saving & Protecting Lives, a Nigerian child vaccination tracking platform. ' +
+      'You MUST respond in ' + targetLang + ' language. This is the most important instruction. ' +
+      'You speak, write, and think only in ' + targetLang + '. ' +
+      'Do not use any other language. ' +
       'Provide accurate, factual information based on WHO and Nigeria NPHCDA guidelines. ' +
-      'Be warm, encouraging, and educational. Respond in ' + targetLang + ' language. ' +
-      'Keep your answer concise but complete (2-4 paragraphs). ' +
-      (conversationContext ? 'Previous conversation:\n' + conversationContext + '\n' : '') +
-      'User question: ' + prompt;
+      'Be warm, encouraging, educational, and thorough. ' +
+      'Give complete detailed answers with examples, explanations, and practical advice. ' +
+      'Aim for 3-6 paragraphs of rich content so the user learns deeply. ' +
+      'Do not be too short. Do not use English unless the user asks in English.';
+
+    var fullPrompt = systemPrompt + '\n\n';
+    if (conversationContext) {
+      fullPrompt += 'Previous conversation:\n' + conversationContext + '\n\n';
+    }
+    fullPrompt += 'User question in ' + targetLang + ': ' + prompt + '\n\n' +
+      'Respond in ' + targetLang + ' language only. Do not switch to English. ' +
+      'Give a thorough, helpful, and warm answer with practical health advice.';
 
     const GEMINI_API_KEY = env.GEMINI_API_KEY;
 
@@ -80,14 +90,15 @@ export async function onRequest(context) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: fullPrompt }] }],
         generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 800
+          temperature: 0.4,
+          maxOutputTokens: 1500,
+          topP: 0.95
         }
       })
     });
 
     const geminiData = await geminiRes.json();
-    var responseText = 'Thank you for your question! Vaccines are one of the most important tools we have to protect our children. For specific questions, please visit your nearest primary health center where trained health workers can provide personalized guidance.';
+    var responseText = 'Na gode da tambayar ku. A kula da lafiyar yara, mahimman abubuwa sun hada da: rigakafi, tsafta, abinci mai gina jiki, da kuma kula da lafiyar yara akai-akai. Domin samun cikakken bayani, ziyarci asibitin da yake kusa da ku.';
 
     if (geminiData.candidates && geminiData.candidates.length > 0 &&
       geminiData.candidates[0].content && geminiData.candidates[0].content.parts) {
@@ -101,8 +112,8 @@ export async function onRequest(context) {
 
   } catch (err) {
     return new Response(JSON.stringify({
-      error: 'Internal server error',
-      response: 'Thank you for your question! Vaccines are one of the most important tools we have to protect our children. For specific questions, please visit your nearest primary health center where trained health workers can provide personalized guidance.'
+      error: 'Internal server error: ' + err.message,
+      response: 'Na gode da tambayar ku. A kula da lafiyar yara, mahimman abubuwa sun hada da: rigakafi, tsafta, abinci mai gina jiki, da kuma kula da lafiyar yara akai-akai. Domin samun cikakken bayani, ziyarci asibitin da yake kusa da ku.'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
