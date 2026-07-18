@@ -5,18 +5,25 @@ export async function onRequest(context) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400"
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+    "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Credentials": "true"
   };
 
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { 
+      status: 200, 
+      headers: corsHeaders 
+    });
   }
 
   if (request.method !== "POST") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: corsHeaders }
+      { 
+        status: 405, 
+        headers: corsHeaders 
+      }
     );
   }
 
@@ -30,21 +37,30 @@ export async function onRequest(context) {
     if (password !== "@haruna66") {
       return new Response(
         JSON.stringify({ error: "Unauthorized access! Incorrect password." }),
-        { status: 401, headers: corsHeaders }
+        { 
+          status: 401, 
+          headers: corsHeaders 
+        }
       );
     }
 
     if (!prompt) {
       return new Response(
         JSON.stringify({ error: "Prompt is required" }),
-        { status: 400, headers: corsHeaders }
+        { 
+          status: 400, 
+          headers: corsHeaders 
+        }
       );
     }
 
     if (!env.GEMINI_API_KEY) {
       return new Response(
         JSON.stringify({ error: "API Key missing in Cloudflare Dashboard" }),
-        { status: 500, headers: corsHeaders }
+        { 
+          status: 500, 
+          headers: corsHeaders 
+        }
       );
     }
 
