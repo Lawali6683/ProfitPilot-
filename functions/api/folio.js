@@ -1,3 +1,5 @@
+Ina son ka taimaka min ka gyara min wannan shafin saboda ya dinga karbar request daga ko ina, ba tare da an samu error ba Access to fetch at 'https://propitpilot.pages.dev/api/folio' from origin 'http://localhost:8080' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.  Ka gyara min in yi copy in gwada,
+
 export async function onRequest(context) {
   const { request, env } = context;
 
